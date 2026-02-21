@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { callAIAgent } from '@/lib/aiAgent'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +25,7 @@ import {
   FiStar,
   FiSettings,
   FiX,
+  FiCrosshair,
 } from 'react-icons/fi'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -74,6 +75,14 @@ interface Store {
   collections: Collection[]
 }
 
+interface UserLocation {
+  latitude: number
+  longitude: number
+  city: string
+  neighborhood: string
+  displayName: string
+}
+
 // ─── AGENT IDS ────────────────────────────────────────────────────────────────
 
 const STYLE_PROFILE_AGENT_ID = '69996315730bbd74d53e8ac3'
@@ -104,6 +113,28 @@ const parseAgentResult = (result: any): any => {
   return null
 }
 
+// ─── IMAGE POOLS ─────────────────────────────────────────────────────────────
+
+const STORE_IMAGES = [
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1528698827591-e19cef51a699?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=600&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&h=400&fit=crop',
+]
+
+const COLLECTION_IMAGES = [
+  'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=300&h=300&fit=crop',
+]
+
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 
 const STYLE_OPTIONS: StyleOption[] = [
@@ -122,101 +153,25 @@ const STYLE_OPTIONS: StyleOption[] = [
 ]
 
 const MOCK_STORES: Store[] = [
-  {
-    id: 's1', name: 'Maison Blanc', description: 'A minimalist boutique focused on clean aesthetics and timeless wardrobe staples.',
-    brand_tags: ['minimalist', 'clean', 'neutral', 'tailored', 'scandinavian'],
-    collection_descriptors: ['curated basics', 'capsule wardrobe', 'monochrome essentials'],
-    aesthetic_category: 'Minimalist',
-    address: '42 Bleecker St, SoHo', distance: '0.3 mi', hours: '10AM - 8PM', phone: '(212) 555-0101',
-    imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Winter Essentials', imageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&h=300&fit=crop', season: 'Winter 2026' },
-      { name: 'Linen Edit', imageUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&h=300&fit=crop', season: 'Spring 2026' },
-    ],
-  },
-  {
-    id: 's2', name: 'GRDN Studio', description: 'Urban streetwear meets high fashion. Limited drops and exclusive collaborations.',
-    brand_tags: ['streetwear', 'urban', 'edgy', 'bold', 'experimental'],
-    collection_descriptors: ['limited editions', 'sneaker collabs', 'graphic art'],
-    aesthetic_category: 'Streetwear',
-    address: '187 Orchard St, LES', distance: '0.8 mi', hours: '11AM - 9PM', phone: '(212) 555-0202',
-    imageUrl: 'https://images.unsplash.com/photo-1528698827591-e19cef51a699?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Drop 07', imageUrl: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=300&h=300&fit=crop', season: 'SS26' },
-      { name: 'Artist Series', imageUrl: 'https://images.unsplash.com/photo-1523398002811-999ca8dec234?w=300&h=300&fit=crop', season: 'Ongoing' },
-    ],
-  },
-  {
-    id: 's3', name: 'Terra & Sage', description: 'Bohemian-inspired boutique with artisan goods and earth-toned fashion.',
-    brand_tags: ['bohemian', 'boho', 'free-spirited', 'romantic', 'vintage'],
-    collection_descriptors: ['handcrafted textiles', 'artisan jewelry', 'earth-toned dresses'],
-    aesthetic_category: 'Bohemian',
-    address: '55 Bedford Ave, Williamsburg', distance: '1.2 mi', hours: '10AM - 7PM', phone: '(718) 555-0303',
-    imageUrl: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Desert Bloom', imageUrl: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=300&fit=crop', season: 'Spring 2026' },
-    ],
-  },
-  {
-    id: 's4', name: 'Atelier Noir', description: 'Dark, dramatic fashion for those who dare. Sculptural silhouettes and luxe textures.',
-    brand_tags: ['dark', 'dramatic', 'avant-garde', 'edgy', 'romantic'],
-    collection_descriptors: ['sculptural coats', 'dark romanticism', 'architectural accessories'],
-    aesthetic_category: 'Avant-Garde',
-    address: '12 Crosby St, SoHo', distance: '0.5 mi', hours: '11AM - 8PM', phone: '(212) 555-0404',
-    imageUrl: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Shadow Line', imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=300&fit=crop', season: 'FW26' },
-      { name: 'Velvet Hours', imageUrl: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=300&h=300&fit=crop', season: 'FW26' },
-    ],
-  },
-  {
-    id: 's5', name: 'Form & Function', description: 'Performance luxury. Athleisure elevated with premium fabrics and sharp design.',
-    brand_tags: ['athleisure', 'sporty', 'luxury', 'functional', 'minimal'],
-    collection_descriptors: ['performance knits', 'luxury activewear', 'travel capsules'],
-    aesthetic_category: 'Athleisure',
-    address: '90 Prince St, SoHo', distance: '0.4 mi', hours: '9AM - 9PM', phone: '(212) 555-0505',
-    imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Move Collection', imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=300&h=300&fit=crop', season: 'SS26' },
-    ],
-  },
-  {
-    id: 's6', name: 'The Archive', description: 'Curated vintage finds from the 60s through Y2K. Every piece tells a story.',
-    brand_tags: ['vintage', 'retro', 'nostalgic', 'curated', 'classic'],
-    collection_descriptors: ['vintage denim', 'retro prints', 'designer resale'],
-    aesthetic_category: 'Vintage',
-    address: '213 Grand St, Chinatown', distance: '0.9 mi', hours: '12PM - 8PM', phone: '(212) 555-0606',
-    imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop',
-    collections: [
-      { name: '90s Revival', imageUrl: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=300&h=300&fit=crop', season: 'Curated' },
-    ],
-  },
-  {
-    id: 's7', name: 'Clarity', description: 'Refined professional wardrobe essentials for the modern power dresser.',
-    brand_tags: ['professional', 'sharp', 'tailored', 'classic', 'refined'],
-    collection_descriptors: ['power suits', 'boardroom essentials', 'modern workwear'],
-    aesthetic_category: 'Professional',
-    address: '5 E 57th St, Midtown', distance: '2.1 mi', hours: '10AM - 7PM', phone: '(212) 555-0707',
-    imageUrl: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Executive Edit', imageUrl: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=300&h=300&fit=crop', season: 'SS26' },
-      { name: 'After Hours', imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop', season: 'FW26' },
-    ],
-  },
-  {
-    id: 's8', name: 'Dune Collective', description: 'Coastal-inspired relaxed luxury. Effortless pieces for sun-soaked living.',
-    brand_tags: ['coastal', 'relaxed', 'casual', 'feminine', 'delicate'],
-    collection_descriptors: ['resort wear', 'linen collection', 'beach-to-bar'],
-    aesthetic_category: 'Casual',
-    address: '78 N 6th St, Williamsburg', distance: '1.5 mi', hours: '10AM - 7PM', phone: '(718) 555-0808',
-    imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop',
-    collections: [
-      { name: 'Shore Line', imageUrl: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=300&fit=crop', season: 'SS26' },
-    ],
-  },
+  { id: 's1', name: 'Maison Blanc', description: 'A minimalist boutique focused on clean aesthetics and timeless wardrobe staples.', brand_tags: ['minimalist', 'clean', 'neutral', 'tailored', 'scandinavian'], collection_descriptors: ['curated basics', 'capsule wardrobe', 'monochrome essentials'], aesthetic_category: 'Minimalist', address: '42 Bleecker St, SoHo', distance: '0.3 mi', hours: '10AM - 8PM', phone: '(212) 555-0101', imageUrl: STORE_IMAGES[0], collections: [{ name: 'Winter Essentials', imageUrl: COLLECTION_IMAGES[0], season: 'Winter 2026' }, { name: 'Linen Edit', imageUrl: COLLECTION_IMAGES[1], season: 'Spring 2026' }] },
+  { id: 's2', name: 'GRDN Studio', description: 'Urban streetwear meets high fashion. Limited drops and exclusive collaborations.', brand_tags: ['streetwear', 'urban', 'edgy', 'bold', 'experimental'], collection_descriptors: ['limited editions', 'sneaker collabs', 'graphic art'], aesthetic_category: 'Streetwear', address: '187 Orchard St, LES', distance: '0.8 mi', hours: '11AM - 9PM', phone: '(212) 555-0202', imageUrl: STORE_IMAGES[1], collections: [{ name: 'Drop 07', imageUrl: COLLECTION_IMAGES[2], season: 'SS26' }, { name: 'Artist Series', imageUrl: COLLECTION_IMAGES[3], season: 'Ongoing' }] },
+  { id: 's3', name: 'Terra & Sage', description: 'Bohemian-inspired boutique with artisan goods and earth-toned fashion.', brand_tags: ['bohemian', 'boho', 'free-spirited', 'romantic', 'vintage'], collection_descriptors: ['handcrafted textiles', 'artisan jewelry', 'earth-toned dresses'], aesthetic_category: 'Bohemian', address: '55 Bedford Ave, Williamsburg', distance: '1.2 mi', hours: '10AM - 7PM', phone: '(718) 555-0303', imageUrl: STORE_IMAGES[2], collections: [{ name: 'Desert Bloom', imageUrl: COLLECTION_IMAGES[4], season: 'Spring 2026' }] },
+  { id: 's4', name: 'Atelier Noir', description: 'Dark, dramatic fashion for those who dare. Sculptural silhouettes and luxe textures.', brand_tags: ['dark', 'dramatic', 'avant-garde', 'edgy', 'romantic'], collection_descriptors: ['sculptural coats', 'dark romanticism', 'architectural accessories'], aesthetic_category: 'Avant-Garde', address: '12 Crosby St, SoHo', distance: '0.5 mi', hours: '11AM - 8PM', phone: '(212) 555-0404', imageUrl: STORE_IMAGES[3], collections: [{ name: 'Shadow Line', imageUrl: COLLECTION_IMAGES[5], season: 'FW26' }, { name: 'Velvet Hours', imageUrl: COLLECTION_IMAGES[4], season: 'FW26' }] },
+  { id: 's5', name: 'Form & Function', description: 'Performance luxury. Athleisure elevated with premium fabrics and sharp design.', brand_tags: ['athleisure', 'sporty', 'luxury', 'functional', 'minimal'], collection_descriptors: ['performance knits', 'luxury activewear', 'travel capsules'], aesthetic_category: 'Athleisure', address: '90 Prince St, SoHo', distance: '0.4 mi', hours: '9AM - 9PM', phone: '(212) 555-0505', imageUrl: STORE_IMAGES[4], collections: [{ name: 'Move Collection', imageUrl: COLLECTION_IMAGES[3], season: 'SS26' }] },
+  { id: 's6', name: 'The Archive', description: 'Curated vintage finds from the 60s through Y2K. Every piece tells a story.', brand_tags: ['vintage', 'retro', 'nostalgic', 'curated', 'classic'], collection_descriptors: ['vintage denim', 'retro prints', 'designer resale'], aesthetic_category: 'Vintage', address: '213 Grand St, Chinatown', distance: '0.9 mi', hours: '12PM - 8PM', phone: '(212) 555-0606', imageUrl: STORE_IMAGES[5], collections: [{ name: '90s Revival', imageUrl: COLLECTION_IMAGES[4], season: 'Curated' }] },
+  { id: 's7', name: 'Clarity', description: 'Refined professional wardrobe essentials for the modern power dresser.', brand_tags: ['professional', 'sharp', 'tailored', 'classic', 'refined'], collection_descriptors: ['power suits', 'boardroom essentials', 'modern workwear'], aesthetic_category: 'Professional', address: '5 E 57th St, Midtown', distance: '2.1 mi', hours: '10AM - 7PM', phone: '(212) 555-0707', imageUrl: STORE_IMAGES[6], collections: [{ name: 'Executive Edit', imageUrl: COLLECTION_IMAGES[5], season: 'SS26' }, { name: 'After Hours', imageUrl: COLLECTION_IMAGES[0], season: 'FW26' }] },
+  { id: 's8', name: 'Dune Collective', description: 'Coastal-inspired relaxed luxury. Effortless pieces for sun-soaked living.', brand_tags: ['coastal', 'relaxed', 'casual', 'feminine', 'delicate'], collection_descriptors: ['resort wear', 'linen collection', 'beach-to-bar'], aesthetic_category: 'Casual', address: '78 N 6th St, Williamsburg', distance: '1.5 mi', hours: '10AM - 7PM', phone: '(718) 555-0808', imageUrl: STORE_IMAGES[7], collections: [{ name: 'Shore Line', imageUrl: COLLECTION_IMAGES[4], season: 'SS26' }] },
 ]
 
 // ─── SAMPLE DATA ──────────────────────────────────────────────────────────────
+
+const SAMPLE_LOCATION: UserLocation = {
+  latitude: 40.7243,
+  longitude: -73.9980,
+  city: 'New York',
+  neighborhood: 'SoHo',
+  displayName: 'SoHo, New York',
+}
 
 const SAMPLE_STYLE_PROFILE: StyleProfile = {
   vibe_name: 'Urban Minimalist',
@@ -239,44 +194,6 @@ const SAMPLE_STORE_MATCHES: StoreMatch[] = [
 
 const SAMPLE_MATCH_SUMMARY = 'Your Urban Minimalist style aligns most strongly with boutiques that prioritize clean lines, neutral palettes, and curated essentials. SoHo emerges as your ideal shopping district, with Maison Blanc and Clarity offering the closest aesthetic matches to your wardrobe vision.'
 
-// ─── MARKDOWN RENDERER ────────────────────────────────────────────────────────
-
-function formatInline(text: string) {
-  const parts = text.split(/\*\*(.*?)\*\*/g)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <strong key={i} className="font-medium">
-        {part}
-      </strong>
-    ) : (
-      part
-    )
-  )
-}
-
-function renderMarkdown(text: string) {
-  if (!text) return null
-  return (
-    <div className="space-y-2">
-      {text.split('\n').map((line, i) => {
-        if (line.startsWith('### '))
-          return <h4 key={i} className="font-medium text-sm mt-3 mb-1 tracking-wider">{line.slice(4)}</h4>
-        if (line.startsWith('## '))
-          return <h3 key={i} className="font-medium text-base mt-3 mb-1 tracking-wider">{line.slice(3)}</h3>
-        if (line.startsWith('# '))
-          return <h2 key={i} className="font-medium text-lg mt-4 mb-2 tracking-wider">{line.slice(2)}</h2>
-        if (line.startsWith('- ') || line.startsWith('* '))
-          return <li key={i} className="ml-4 list-disc text-sm font-light">{formatInline(line.slice(2))}</li>
-        if (/^\d+\.\s/.test(line))
-          return <li key={i} className="ml-4 list-decimal text-sm font-light">{formatInline(line.replace(/^\d+\.\s/, ''))}</li>
-        if (!line.trim()) return <div key={i} className="h-1" />
-        return <p key={i} className="text-sm font-light leading-relaxed">{formatInline(line)}</p>
-      })}
-    </div>
-  )
-}
-
 // ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
 
 class ErrorBoundary extends React.Component<
@@ -297,10 +214,7 @@ class ErrorBoundary extends React.Component<
           <div className="text-center p-8 max-w-md">
             <h2 className="text-xl font-medium mb-2 tracking-wider">Something went wrong</h2>
             <p className="text-muted-foreground mb-4 text-sm font-light">{this.state.error}</p>
-            <button
-              onClick={() => this.setState({ hasError: false, error: '' })}
-              className="px-6 py-2 bg-primary text-primary-foreground text-sm tracking-widest uppercase"
-            >
+            <button onClick={() => this.setState({ hasError: false, error: '' })} className="px-6 py-2 bg-primary text-primary-foreground text-sm tracking-widest uppercase">
               Try again
             </button>
           </div>
@@ -330,17 +244,7 @@ function OnboardingWelcome({ onStart }: { onStart: () => void }) {
   )
 }
 
-function StyleQuiz({
-  selectedStyles,
-  onToggle,
-  onSubmit,
-  isAnalyzing,
-}: {
-  selectedStyles: string[]
-  onToggle: (id: string) => void
-  onSubmit: () => void
-  isAnalyzing: boolean
-}) {
+function StyleQuiz({ selectedStyles, onToggle, onSubmit, isAnalyzing }: { selectedStyles: string[]; onToggle: (id: string) => void; onSubmit: () => void; isAnalyzing: boolean }) {
   if (isAnalyzing) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center">
@@ -350,9 +254,7 @@ function StyleQuiz({
             <Skeleton className="h-8 w-64 mx-auto" />
           </div>
           <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-40 w-full" />
-            ))}
+            {[1, 2, 3, 4].map((i) => (<Skeleton key={i} className="h-40 w-full" />))}
           </div>
           <div className="flex items-center justify-center gap-3">
             <FiRefreshCw className="w-4 h-4 text-primary animate-spin" />
@@ -370,22 +272,13 @@ function StyleQuiz({
         <h2 className="font-serif text-2xl font-light tracking-wider mb-2">Select Your Aesthetic</h2>
         <p className="text-xs text-muted-foreground font-light">Choose 5 to 10 styles that resonate with you</p>
       </div>
-
       <div className="grid grid-cols-2 gap-3 mb-24">
         {STYLE_OPTIONS.map((option) => {
           const isSelected = selectedStyles.includes(option.id)
           return (
-            <button
-              key={option.id}
-              onClick={() => onToggle(option.id)}
-              className={`relative overflow-hidden text-left transition-all duration-300 ${isSelected ? 'ring-2 ring-primary shadow-sm' : 'ring-1 ring-border'}`}
-            >
+            <button key={option.id} onClick={() => onToggle(option.id)} className={`relative overflow-hidden text-left transition-all duration-300 ${isSelected ? 'ring-2 ring-primary shadow-sm' : 'ring-1 ring-border'}`}>
               <div className="aspect-[4/5] relative">
-                <img
-                  src={option.imageUrl}
-                  alt={option.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={option.imageUrl} alt={option.name} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 {isSelected && (
                   <div className="absolute top-2 right-2 w-6 h-6 bg-primary flex items-center justify-center">
@@ -393,9 +286,7 @@ function StyleQuiz({
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <Badge variant="secondary" className="text-[10px] uppercase tracking-widest mb-1 font-light bg-white/20 text-white border-0">
-                    {option.category}
-                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] uppercase tracking-widest mb-1 font-light bg-white/20 text-white border-0">{option.category}</Badge>
                   <p className="text-white text-sm font-normal tracking-wider">{option.name}</p>
                   <p className="text-white/70 text-[10px] font-light tracking-wide">{option.description}</p>
                 </div>
@@ -404,17 +295,10 @@ function StyleQuiz({
           )
         })}
       </div>
-
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-4">
         <div className="max-w-md mx-auto flex items-center justify-between">
-          <p className="text-xs text-muted-foreground font-light tracking-wider">
-            {selectedStyles.length} of 10 selected
-          </p>
-          <Button
-            onClick={onSubmit}
-            disabled={selectedStyles.length < 5}
-            className="px-8 py-2 text-xs uppercase tracking-[0.25em] font-normal bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-all duration-300"
-          >
+          <p className="text-xs text-muted-foreground font-light tracking-wider">{selectedStyles.length} of 10 selected</p>
+          <Button onClick={onSubmit} disabled={selectedStyles.length < 5} className="px-8 py-2 text-xs uppercase tracking-[0.25em] font-normal bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-all duration-300">
             Discover My Style
           </Button>
         </div>
@@ -423,13 +307,7 @@ function StyleQuiz({
   )
 }
 
-function StyleDNAScreen({
-  profile,
-  onExplore,
-}: {
-  profile: StyleProfile
-  onExplore: () => void
-}) {
+function StyleDNAScreen({ profile, onExplore }: { profile: StyleProfile; onExplore: () => void }) {
   return (
     <div className="min-h-screen px-6 py-12">
       <div className="text-center mb-10">
@@ -437,54 +315,41 @@ function StyleDNAScreen({
         <h1 className="font-serif text-4xl font-light tracking-wider mb-4">{profile.vibe_name}</h1>
         <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-8" />
       </div>
-
       <div className="space-y-8 mb-12">
         <div>
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 font-light">Style Tags</p>
           <div className="flex flex-wrap gap-2">
             {Array.isArray(profile?.style_tags) && profile.style_tags.map((tag, i) => (
-              <Badge key={i} variant="outline" className="text-xs font-light tracking-wider px-3 py-1 border-primary/30 text-foreground">
-                {tag}
-              </Badge>
+              <Badge key={i} variant="outline" className="text-xs font-light tracking-wider px-3 py-1 border-primary/30 text-foreground">{tag}</Badge>
             ))}
           </div>
         </div>
-
         <Separator className="bg-border" />
-
         <div>
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 font-light">Color Palette</p>
           <div className="flex flex-wrap gap-2">
             {Array.isArray(profile?.color_preferences) && profile.color_preferences.map((color, i) => (
               <span key={i} className="inline-flex items-center gap-1.5 text-xs font-light tracking-wider text-foreground bg-secondary px-3 py-1.5 border border-border">
-                <span className="w-2 h-2 bg-primary/60" />
-                {color}
+                <span className="w-2 h-2 bg-primary/60" />{color}
               </span>
             ))}
           </div>
         </div>
-
         <Separator className="bg-border" />
-
         <div>
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 font-light">Silhouettes</p>
           <div className="flex flex-wrap gap-2">
             {Array.isArray(profile?.silhouette_preferences) && profile.silhouette_preferences.map((sil, i) => (
-              <Badge key={i} variant="secondary" className="text-xs font-light tracking-wider px-3 py-1">
-                {sil}
-              </Badge>
+              <Badge key={i} variant="secondary" className="text-xs font-light tracking-wider px-3 py-1">{sil}</Badge>
             ))}
           </div>
         </div>
-
         <Separator className="bg-border" />
-
         <div>
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 font-light">Description</p>
           <p className="text-sm font-light leading-relaxed text-foreground">{profile.vibe_description}</p>
         </div>
       </div>
-
       <div className="text-center">
         <Button onClick={onExplore} className="px-12 py-6 text-xs uppercase tracking-[0.25em] font-normal bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 shadow-sm">
           Explore Stores
@@ -494,16 +359,11 @@ function StyleDNAScreen({
   )
 }
 
-function SimulatedMap({ storeMatches, stores }: { storeMatches: StoreMatch[]; stores: Store[] }) {
+function SimulatedMap({ storeMatches, stores, locationName }: { storeMatches: StoreMatch[]; stores: Store[]; locationName: string }) {
   const pinPositions = [
-    { top: '30%', left: '25%' },
-    { top: '55%', left: '70%' },
-    { top: '40%', left: '45%' },
-    { top: '20%', left: '60%' },
-    { top: '65%', left: '30%' },
-    { top: '50%', left: '55%' },
-    { top: '35%', left: '80%' },
-    { top: '70%', left: '50%' },
+    { top: '30%', left: '25%' }, { top: '55%', left: '70%' }, { top: '40%', left: '45%' },
+    { top: '20%', left: '60%' }, { top: '65%', left: '30%' }, { top: '50%', left: '55%' },
+    { top: '35%', left: '80%' }, { top: '70%', left: '50%' },
   ]
 
   return (
@@ -518,7 +378,12 @@ function SimulatedMap({ storeMatches, stores }: { storeMatches: StoreMatch[]; st
       </div>
       <div className="absolute top-3 left-3 flex items-center gap-1.5">
         <FiMap className="w-3 h-3 text-muted-foreground" />
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-light">SoHo & Vicinity</span>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-light">{locationName || 'Your Area'}</span>
+      </div>
+      {/* Center dot for user location */}
+      <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+        <div className="w-3 h-3 bg-primary border-2 border-white shadow-md rounded-full" />
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] uppercase tracking-widest text-primary font-normal whitespace-nowrap">You</div>
       </div>
       {stores.map((store, idx) => {
         const match = storeMatches.find((m) => m.store_name === store.name)
@@ -527,11 +392,10 @@ function SimulatedMap({ storeMatches, stores }: { storeMatches: StoreMatch[]; st
         let dotColor = 'bg-muted-foreground/40'
         if (pct >= 80) dotColor = 'bg-green-600'
         else if (pct >= 50) dotColor = 'bg-yellow-500'
-
         return (
           <div key={store.id} className="absolute group" style={{ top: pos.top, left: pos.left }}>
             <div className={`w-3 h-3 ${dotColor} border border-white shadow-sm`} />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-card border border-border px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-card border border-border px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm z-10">
               <p className="text-[10px] font-normal tracking-wider">{store.name}</p>
               {pct > 0 && <p className="text-[9px] text-primary font-normal">{pct}%</p>}
             </div>
@@ -539,39 +403,17 @@ function SimulatedMap({ storeMatches, stores }: { storeMatches: StoreMatch[]; st
         )
       })}
       <div className="absolute bottom-3 right-3 flex items-center gap-3">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-600" />
-          <span className="text-[9px] text-muted-foreground font-light tracking-wider">80%+</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-yellow-500" />
-          <span className="text-[9px] text-muted-foreground font-light tracking-wider">50-79%</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-muted-foreground/40" />
-          <span className="text-[9px] text-muted-foreground font-light tracking-wider">&lt;50%</span>
-        </div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 bg-green-600" /><span className="text-[9px] text-muted-foreground font-light tracking-wider">80%+</span></div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 bg-yellow-500" /><span className="text-[9px] text-muted-foreground font-light tracking-wider">50-79%</span></div>
+        <div className="flex items-center gap-1"><div className="w-2 h-2 bg-muted-foreground/40" /><span className="text-[9px] text-muted-foreground font-light tracking-wider">&lt;50%</span></div>
       </div>
     </div>
   )
 }
 
-function StoreCard({
-  store,
-  match,
-  onSelect,
-  isFavorite,
-  onToggleFavorite,
-}: {
-  store: Store
-  match: StoreMatch | undefined
-  onSelect: () => void
-  isFavorite: boolean
-  onToggleFavorite: () => void
-}) {
+function StoreCard({ store, match, onSelect, isFavorite, onToggleFavorite }: { store: Store; match: StoreMatch | undefined; onSelect: () => void; isFavorite: boolean; onToggleFavorite: () => void }) {
   const pct = match?.match_percentage ?? 0
   const sharedTags = Array.isArray(match?.shared_tags) ? match.shared_tags.slice(0, 3) : []
-
   return (
     <button onClick={onSelect} className="w-full text-left border border-border bg-card transition-all duration-300 hover:shadow-sm">
       <div className="flex gap-3 p-3">
@@ -583,8 +425,7 @@ function StoreCard({
             <div>
               <p className="text-sm font-normal tracking-wider truncate">{store.name}</p>
               <p className="text-[10px] text-muted-foreground font-light tracking-wider flex items-center gap-1">
-                <FiMapPin className="w-2.5 h-2.5" />
-                {store.distance}
+                <FiMapPin className="w-2.5 h-2.5" />{store.distance}
               </p>
             </div>
             <div className="text-right flex-shrink-0 ml-2">
@@ -595,20 +436,12 @@ function StoreCard({
           {sharedTags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {sharedTags.map((tag, i) => (
-                <span key={i} className="text-[9px] uppercase tracking-widest text-muted-foreground bg-secondary px-1.5 py-0.5 border border-border font-light">
-                  {tag}
-                </span>
+                <span key={i} className="text-[9px] uppercase tracking-widest text-muted-foreground bg-secondary px-1.5 py-0.5 border border-border font-light">{tag}</span>
               ))}
             </div>
           )}
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite()
-          }}
-          className="flex-shrink-0 self-start p-1"
-        >
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite() }} className="flex-shrink-0 self-start p-1">
           <FiHeart className={`w-4 h-4 transition-colors ${isFavorite ? 'text-primary fill-primary' : 'text-muted-foreground'}`} />
         </button>
       </div>
@@ -617,33 +450,21 @@ function StoreCard({
 }
 
 function DiscoverScreen({
-  storeMatches,
-  matchSummary,
-  isMatching,
-  activeFilter,
-  onFilterChange,
-  onRefresh,
-  onSelectStore,
-  favorites,
-  onToggleFavorite,
-  styleProfile,
+  storeMatches, matchSummary, isMatching, activeFilter, onFilterChange, onRefresh, onSelectStore,
+  favorites, onToggleFavorite, styleProfile, localStores, userLocation, locationLoading, locationError,
+  onRequestLocation, isGeneratingStores,
 }: {
-  storeMatches: StoreMatch[]
-  matchSummary: string
-  isMatching: boolean
-  activeFilter: string
-  onFilterChange: (f: string) => void
-  onRefresh: () => void
-  onSelectStore: (store: Store) => void
-  favorites: string[]
-  onToggleFavorite: (id: string) => void
-  styleProfile: StyleProfile | null
+  storeMatches: StoreMatch[]; matchSummary: string; isMatching: boolean; activeFilter: string;
+  onFilterChange: (f: string) => void; onRefresh: () => void; onSelectStore: (store: Store) => void;
+  favorites: string[]; onToggleFavorite: (id: string) => void; styleProfile: StyleProfile | null;
+  localStores: Store[]; userLocation: UserLocation | null; locationLoading: boolean;
+  locationError: string; onRequestLocation: () => void; isGeneratingStores: boolean;
 }) {
-  const categories = ['All', 'Nearest', 'Best Match', ...Array.from(new Set(MOCK_STORES.map((s) => s.aesthetic_category)))]
+  const displayStores = localStores.length > 0 ? localStores : []
+  const categories = ['All', 'Nearest', 'Best Match', ...Array.from(new Set(displayStores.map((s) => s.aesthetic_category)))]
 
   const sortedStores = React.useMemo(() => {
-    let stores = [...MOCK_STORES]
-
+    let stores = [...displayStores]
     if (activeFilter === 'Nearest') {
       stores.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     } else if (activeFilter === 'Best Match') {
@@ -655,44 +476,46 @@ function DiscoverScreen({
     } else if (activeFilter !== 'All') {
       stores = stores.filter((s) => s.aesthetic_category === activeFilter)
     }
-
     return stores
-  }, [activeFilter, storeMatches])
+  }, [activeFilter, storeMatches, displayStores])
 
   return (
     <div className="min-h-screen pb-24">
       <div className="px-4 pt-6 pb-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <div>
             <p className="uppercase tracking-[0.3em] text-xs text-muted-foreground font-light">Discover</p>
             <h2 className="font-serif text-xl font-light tracking-wider">Your Matches</h2>
           </div>
-          <button
-            onClick={onRefresh}
-            disabled={isMatching || !styleProfile}
-            className="p-2 text-muted-foreground hover:text-primary transition-colors disabled:opacity-40"
-          >
+          <button onClick={onRefresh} disabled={isMatching || !styleProfile || !userLocation} className="p-2 text-muted-foreground hover:text-primary transition-colors disabled:opacity-40">
             <FiRefreshCw className={`w-4 h-4 ${isMatching ? 'animate-spin' : ''}`} />
           </button>
         </div>
+
+        {/* Location status bar */}
+        {userLocation && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <FiCrosshair className="w-3 h-3 text-primary" />
+            <span className="text-[11px] text-primary font-normal tracking-wider">{userLocation.displayName}</span>
+          </div>
+        )}
 
         {matchSummary && (
           <p className="text-xs text-muted-foreground font-light leading-relaxed mb-4">{matchSummary}</p>
         )}
 
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => onFilterChange(cat)}
-              className={`flex-shrink-0 px-3 py-1.5 text-[10px] uppercase tracking-widest font-light border transition-all duration-200 ${activeFilter === cat ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:border-primary/40'}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {displayStores.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {categories.map((cat) => (
+              <button key={cat} onClick={() => onFilterChange(cat)} className={`flex-shrink-0 px-3 py-1.5 text-[10px] uppercase tracking-widest font-light border transition-all duration-200 ${activeFilter === cat ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:border-primary/40'}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* No style profile yet */}
       {!styleProfile && !isMatching && (
         <div className="px-4 py-12 text-center">
           <FiCompass className="w-8 h-8 text-muted-foreground/40 mx-auto mb-4" />
@@ -700,7 +523,37 @@ function DiscoverScreen({
         </div>
       )}
 
-      {isMatching && (
+      {/* Has profile but no location */}
+      {styleProfile && !userLocation && !locationLoading && !isMatching && (
+        <div className="px-4 mb-4">
+          <div className="border border-border bg-secondary/30 p-8 text-center">
+            <FiMapPin className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-sm font-light tracking-wider mb-1">Enable location to discover stores near you</p>
+            <p className="text-xs text-muted-foreground font-light mb-5">We will find matching boutiques in your area based on your Style DNA</p>
+            <Button onClick={onRequestLocation} className="px-8 py-5 text-xs uppercase tracking-[0.25em] font-normal bg-primary text-primary-foreground hover:bg-primary/90">
+              <FiCrosshair className="w-3.5 h-3.5 mr-2" />
+              Enable Location
+            </Button>
+            {locationError && (
+              <div className="mt-4 bg-destructive/10 border border-destructive/30 px-4 py-3 text-left">
+                <p className="text-xs text-destructive font-light">{locationError}</p>
+                <button onClick={onRequestLocation} className="text-xs text-destructive font-normal underline mt-1">Try again</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Location loading */}
+      {locationLoading && (
+        <div className="px-4 py-12 text-center">
+          <FiCrosshair className="w-6 h-6 text-primary mx-auto mb-3 animate-pulse" />
+          <p className="text-sm text-muted-foreground font-light tracking-wider">Detecting your location...</p>
+        </div>
+      )}
+
+      {/* Store generation / matching loading */}
+      {(isMatching || isGeneratingStores) && !locationLoading && (
         <div className="px-4 space-y-3">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="border border-border bg-card p-3">
@@ -709,10 +562,7 @@ function DiscoverScreen({
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-20" />
-                  <div className="flex gap-1">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
+                  <div className="flex gap-1"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
                 </div>
                 <Skeleton className="w-10 h-10" />
               </div>
@@ -720,28 +570,24 @@ function DiscoverScreen({
           ))}
           <div className="flex items-center justify-center gap-2 pt-4">
             <FiRefreshCw className="w-3 h-3 text-primary animate-spin" />
-            <p className="text-xs text-muted-foreground font-light tracking-wider">Finding your matches...</p>
+            <p className="text-xs text-muted-foreground font-light tracking-wider">
+              {isGeneratingStores ? 'Discovering stores near you...' : 'Finding your matches...'}
+            </p>
           </div>
         </div>
       )}
 
-      {styleProfile && !isMatching && (
+      {/* Stores loaded */}
+      {styleProfile && !isMatching && !isGeneratingStores && !locationLoading && displayStores.length > 0 && (
         <>
           <div className="px-4 mb-4">
-            <SimulatedMap storeMatches={storeMatches} stores={MOCK_STORES} />
+            <SimulatedMap storeMatches={storeMatches} stores={displayStores} locationName={userLocation?.displayName || 'Your Area'} />
           </div>
           <div className="px-4 space-y-2">
             {sortedStores.map((store) => {
               const match = storeMatches.find((m) => m.store_name === store.name)
               return (
-                <StoreCard
-                  key={store.id}
-                  store={store}
-                  match={match}
-                  onSelect={() => onSelectStore(store)}
-                  isFavorite={favorites.includes(store.id)}
-                  onToggleFavorite={() => onToggleFavorite(store.id)}
-                />
+                <StoreCard key={store.id} store={store} match={match} onSelect={() => onSelectStore(store)} isFavorite={favorites.includes(store.id)} onToggleFavorite={() => onToggleFavorite(store.id)} />
               )
             })}
           </div>
@@ -751,33 +597,16 @@ function DiscoverScreen({
   )
 }
 
-function StoreDetailScreen({
-  store,
-  match,
-  onBack,
-  isFavorite,
-  onToggleFavorite,
-}: {
-  store: Store
-  match: StoreMatch | undefined
-  onBack: () => void
-  isFavorite: boolean
-  onToggleFavorite: () => void
-}) {
+function StoreDetailScreen({ store, match, onBack, isFavorite, onToggleFavorite }: { store: Store; match: StoreMatch | undefined; onBack: () => void; isFavorite: boolean; onToggleFavorite: () => void }) {
   const pct = match?.match_percentage ?? 0
   const sharedTags = Array.isArray(match?.shared_tags) ? match.shared_tags : []
   const explanation = match?.match_explanation ?? ''
   const collections = Array.isArray(store?.collections) ? store.collections : []
-
   return (
     <div className="min-h-screen pb-24">
       <div className="relative">
-        <button onClick={onBack} className="absolute top-4 left-4 z-10 w-8 h-8 bg-white/90 flex items-center justify-center border border-border shadow-sm">
-          <FiArrowLeft className="w-4 h-4 text-foreground" />
-        </button>
-        <button onClick={onToggleFavorite} className="absolute top-4 right-4 z-10 w-8 h-8 bg-white/90 flex items-center justify-center border border-border shadow-sm">
-          <FiHeart className={`w-4 h-4 ${isFavorite ? 'text-primary fill-primary' : 'text-foreground'}`} />
-        </button>
+        <button onClick={onBack} className="absolute top-4 left-4 z-10 w-8 h-8 bg-white/90 flex items-center justify-center border border-border shadow-sm"><FiArrowLeft className="w-4 h-4 text-foreground" /></button>
+        <button onClick={onToggleFavorite} className="absolute top-4 right-4 z-10 w-8 h-8 bg-white/90 flex items-center justify-center border border-border shadow-sm"><FiHeart className={`w-4 h-4 ${isFavorite ? 'text-primary fill-primary' : 'text-foreground'}`} /></button>
         <div className="aspect-[16/9] relative overflow-hidden">
           <img src={store.imageUrl} alt={store.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -789,47 +618,34 @@ function StoreDetailScreen({
           )}
         </div>
       </div>
-
       <div className="px-6 py-6 space-y-6">
         <div>
           <Badge variant="secondary" className="text-[10px] uppercase tracking-widest mb-2 font-light">{store.aesthetic_category}</Badge>
           <h1 className="font-serif text-3xl font-light tracking-wider mb-2">{store.name}</h1>
           <p className="text-sm text-muted-foreground font-light leading-relaxed">{store.description}</p>
         </div>
-
         {explanation && (
           <div>
             <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-2 font-light">Why You Match</p>
-            <div className="border border-border bg-secondary/50 p-4">
-              <p className="text-sm font-light leading-relaxed">{explanation}</p>
-            </div>
+            <div className="border border-border bg-secondary/50 p-4"><p className="text-sm font-light leading-relaxed">{explanation}</p></div>
           </div>
         )}
-
         {sharedTags.length > 0 && (
           <div>
             <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-2 font-light">Shared Style Tags</p>
             <div className="flex flex-wrap gap-2">
-              {sharedTags.map((tag, i) => (
-                <Badge key={i} variant="outline" className="text-xs font-light tracking-wider px-3 py-1 border-primary/30 text-foreground">
-                  {tag}
-                </Badge>
-              ))}
+              {sharedTags.map((tag, i) => (<Badge key={i} variant="outline" className="text-xs font-light tracking-wider px-3 py-1 border-primary/30 text-foreground">{tag}</Badge>))}
             </div>
           </div>
         )}
-
         <Separator className="bg-border" />
-
         <div>
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-3 font-light">Current Collections</p>
           {collections.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto -mx-6 px-6 pb-2">
               {collections.map((col, i) => (
                 <div key={i} className="flex-shrink-0 w-40 border border-border bg-card">
-                  <div className="aspect-square overflow-hidden">
-                    <img src={col.imageUrl} alt={col.name} className="w-full h-full object-cover" />
-                  </div>
+                  <div className="aspect-square overflow-hidden"><img src={col.imageUrl} alt={col.name} className="w-full h-full object-cover" /></div>
                   <div className="p-2.5">
                     <p className="text-xs font-normal tracking-wider truncate">{col.name}</p>
                     <p className="text-[10px] text-muted-foreground font-light tracking-wider">{col.season}</p>
@@ -837,55 +653,27 @@ function StoreDetailScreen({
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground font-light tracking-wider">Collection info coming soon</p>
-          )}
+          ) : (<p className="text-xs text-muted-foreground font-light tracking-wider">Collection info coming soon</p>)}
         </div>
-
         <Separator className="bg-border" />
-
         <div className="space-y-3">
           <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground mb-2 font-light">Store Information</p>
-          <div className="flex items-start gap-3">
-            <FiMapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-light tracking-wider">{store.address}</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <FiClock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-light tracking-wider">{store.hours}</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <FiPhone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-light tracking-wider">{store.phone}</p>
-          </div>
+          <div className="flex items-start gap-3"><FiMapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" /><p className="text-sm font-light tracking-wider">{store.address}</p></div>
+          <div className="flex items-start gap-3"><FiClock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" /><p className="text-sm font-light tracking-wider">{store.hours}</p></div>
+          <div className="flex items-start gap-3"><FiPhone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" /><p className="text-sm font-light tracking-wider">{store.phone}</p></div>
         </div>
-
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" className="flex-1 text-xs uppercase tracking-[0.2em] font-light py-5 border-border hover:bg-secondary transition-all">
-            <FiNavigation className="w-3.5 h-3.5 mr-2" />
-            Get Directions
-          </Button>
+          <Button variant="outline" className="flex-1 text-xs uppercase tracking-[0.2em] font-light py-5 border-border hover:bg-secondary transition-all"><FiNavigation className="w-3.5 h-3.5 mr-2" />Get Directions</Button>
         </div>
       </div>
     </div>
   )
 }
 
-function ProfileScreen({
-  profile,
-  favorites,
-  onRetakeQuiz,
-  onSelectStore,
-}: {
-  profile: StyleProfile | null
-  favorites: string[]
-  onRetakeQuiz: () => void
-  onSelectStore: (store: Store) => void
-}) {
+function ProfileScreen({ profile, favorites, onRetakeQuiz, onSelectStore, localStores, userLocation, onRequestLocation }: { profile: StyleProfile | null; favorites: string[]; onRetakeQuiz: () => void; onSelectStore: (store: Store) => void; localStores: Store[]; userLocation: UserLocation | null; onRequestLocation: () => void }) {
   const [userName, setUserName] = useState('Style Explorer')
   const [notifications, setNotifications] = useState(true)
-
-  const favoriteStores = MOCK_STORES.filter((s) => favorites.includes(s.id))
+  const favoriteStores = localStores.filter((s) => favorites.includes(s.id))
 
   return (
     <div className="min-h-screen pb-24 px-6 py-8">
@@ -893,7 +681,6 @@ function ProfileScreen({
         <p className="uppercase tracking-[0.3em] text-xs text-muted-foreground font-light mb-1">Profile</p>
         <h2 className="font-serif text-2xl font-light tracking-wider">Your Style</h2>
       </div>
-
       {profile && (
         <Card className="mb-6 border border-border shadow-sm bg-card">
           <CardHeader className="pb-3">
@@ -906,21 +693,16 @@ function ProfileScreen({
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {Array.isArray(profile?.style_tags) && profile.style_tags.slice(0, 5).map((tag, i) => (
-                <Badge key={i} variant="outline" className="text-[10px] font-light tracking-wider px-2 py-0.5 border-primary/30">
-                  {tag}
-                </Badge>
+                <Badge key={i} variant="outline" className="text-[10px] font-light tracking-wider px-2 py-0.5 border-primary/30">{tag}</Badge>
               ))}
             </div>
             <p className="text-xs text-muted-foreground font-light leading-relaxed line-clamp-3">{profile.vibe_description}</p>
           </CardContent>
         </Card>
       )}
-
       <Button onClick={onRetakeQuiz} variant="outline" className="w-full text-xs uppercase tracking-[0.2em] font-light py-5 border-border hover:bg-secondary transition-all mb-8">
-        <FiRefreshCw className="w-3.5 h-3.5 mr-2" />
-        Retake Style Quiz
+        <FiRefreshCw className="w-3.5 h-3.5 mr-2" />Retake Style Quiz
       </Button>
-
       <div className="mb-8">
         <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground font-light mb-3">Favorites ({favoriteStores.length})</p>
         {favoriteStores.length === 0 ? (
@@ -931,14 +713,8 @@ function ProfileScreen({
         ) : (
           <div className="space-y-2">
             {favoriteStores.map((store) => (
-              <button
-                key={store.id}
-                onClick={() => onSelectStore(store)}
-                className="w-full text-left flex items-center gap-3 p-3 border border-border bg-card hover:shadow-sm transition-all"
-              >
-                <div className="w-12 h-12 flex-shrink-0 overflow-hidden">
-                  <img src={store.imageUrl} alt={store.name} className="w-full h-full object-cover" />
-                </div>
+              <button key={store.id} onClick={() => onSelectStore(store)} className="w-full text-left flex items-center gap-3 p-3 border border-border bg-card hover:shadow-sm transition-all">
+                <div className="w-12 h-12 flex-shrink-0 overflow-hidden"><img src={store.imageUrl} alt={store.name} className="w-full h-full object-cover" /></div>
                 <div className="min-w-0">
                   <p className="text-sm font-normal tracking-wider truncate">{store.name}</p>
                   <p className="text-[10px] text-muted-foreground font-light tracking-wider">{store.aesthetic_category}</p>
@@ -949,28 +725,24 @@ function ProfileScreen({
           </div>
         )}
       </div>
-
       <Separator className="bg-border mb-6" />
-
       <div className="space-y-5">
-        <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground font-light flex items-center gap-2">
-          <FiSettings className="w-3 h-3" />
-          Account Settings
-        </p>
+        <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground font-light flex items-center gap-2"><FiSettings className="w-3 h-3" />Account Settings</p>
         <div>
           <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-light">Name</Label>
-          <Input
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            className="mt-1 text-sm font-light tracking-wider bg-card border-border focus:ring-primary"
-          />
+          <Input value={userName} onChange={(e) => setUserName(e.target.value)} className="mt-1 text-sm font-light tracking-wider bg-card border-border focus:ring-primary" />
         </div>
         <div>
           <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-light">Location</Label>
-          <p className="text-sm font-light tracking-wider mt-1 flex items-center gap-1.5">
-            <FiMapPin className="w-3 h-3 text-primary" />
-            New York, NY
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-sm font-light tracking-wider flex items-center gap-1.5">
+              <FiMapPin className="w-3 h-3 text-primary" />
+              {userLocation?.displayName || 'Location not set'}
+            </p>
+            <button onClick={onRequestLocation} className="text-[10px] text-primary font-normal tracking-wider underline">
+              {userLocation ? 'Update' : 'Enable'}
+            </button>
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -984,37 +756,19 @@ function ProfileScreen({
   )
 }
 
-function BottomNav({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: 'discover' | 'favorites' | 'profile'
-  onTabChange: (tab: 'discover' | 'favorites' | 'profile') => void
-}) {
+function BottomNav({ activeTab, onTabChange }: { activeTab: 'discover' | 'favorites' | 'profile'; onTabChange: (tab: 'discover' | 'favorites' | 'profile') => void }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       <div className="max-w-md mx-auto bg-card border-t border-border">
         <div className="flex">
-          <button
-            onClick={() => onTabChange('discover')}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'discover' ? 'text-primary' : 'text-muted-foreground'}`}
-          >
-            <FiCompass className="w-5 h-5" />
-            <span className="text-[9px] uppercase tracking-widest font-light">Discover</span>
+          <button onClick={() => onTabChange('discover')} className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'discover' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <FiCompass className="w-5 h-5" /><span className="text-[9px] uppercase tracking-widest font-light">Discover</span>
           </button>
-          <button
-            onClick={() => onTabChange('favorites')}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'favorites' ? 'text-primary' : 'text-muted-foreground'}`}
-          >
-            <FiHeart className="w-5 h-5" />
-            <span className="text-[9px] uppercase tracking-widest font-light">Favorites</span>
+          <button onClick={() => onTabChange('favorites')} className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'favorites' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <FiHeart className="w-5 h-5" /><span className="text-[9px] uppercase tracking-widest font-light">Favorites</span>
           </button>
-          <button
-            onClick={() => onTabChange('profile')}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'profile' ? 'text-primary' : 'text-muted-foreground'}`}
-          >
-            <FiUser className="w-5 h-5" />
-            <span className="text-[9px] uppercase tracking-widest font-light">Profile</span>
+          <button onClick={() => onTabChange('profile')} className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${activeTab === 'profile' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <FiUser className="w-5 h-5" /><span className="text-[9px] uppercase tracking-widest font-light">Profile</span>
           </button>
         </div>
       </div>
@@ -1025,9 +779,8 @@ function BottomNav({
 function AgentStatusPanel({ activeAgentId }: { activeAgentId: string | null }) {
   const agents = [
     { id: STYLE_PROFILE_AGENT_ID, name: 'Style Profile Agent', purpose: 'Analyzes quiz selections into a style DNA profile' },
-    { id: STORE_MATCH_AGENT_ID, name: 'Store Match Agent', purpose: 'Ranks stores by compatibility with your style' },
+    { id: STORE_MATCH_AGENT_ID, name: 'Store Match Agent', purpose: 'Discovers & ranks stores near you by style compatibility' },
   ]
-
   return (
     <div className="border border-border bg-card p-4">
       <p className="uppercase tracking-[0.2em] text-[10px] text-muted-foreground font-light mb-3">AI Agents</p>
@@ -1064,13 +817,67 @@ export default function Page() {
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
   const [sampleData, setSampleData] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  // Location state
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
+  const [locationLoading, setLocationLoading] = useState(false)
+  const [locationError, setLocationError] = useState('')
+  const [localStores, setLocalStores] = useState<Store[]>([])
+  const [isGeneratingStores, setIsGeneratingStores] = useState(false)
+  const locationRequested = useRef(false)
 
-  // Toggle sample data
+  // ─── Geolocation ────────────────────────────────────────────────────────────
+
+  const requestLocation = useCallback(async () => {
+    setLocationLoading(true)
+    setLocationError('')
+
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser')
+      setLocationLoading(false)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`,
+            { headers: { 'Accept': 'application/json' } }
+          )
+          const data = await response.json()
+          const address = data.address || {}
+          const city = address.city || address.town || address.village || address.county || 'Your Area'
+          const neighborhood = address.suburb || address.neighbourhood || address.quarter || address.district || ''
+          const displayName = neighborhood ? `${neighborhood}, ${city}` : city
+
+          setUserLocation({ latitude, longitude, city, neighborhood, displayName })
+        } catch {
+          setUserLocation({ latitude, longitude, city: 'Your Area', neighborhood: '', displayName: 'Your Area' })
+        }
+        setLocationLoading(false)
+      },
+      (error) => {
+        setLocationError(
+          error.code === 1 ? 'Location access denied. Please enable location permissions in your browser settings.' :
+          error.code === 2 ? 'Location unavailable. Please check your connection and try again.' :
+          'Location request timed out. Please try again.'
+        )
+        setLocationLoading(false)
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    )
+  }, [])
+
+  // ─── Sample data toggle ─────────────────────────────────────────────────────
+
   useEffect(() => {
     if (sampleData) {
       setStyleProfile(SAMPLE_STYLE_PROFILE)
       setStoreMatches(SAMPLE_STORE_MATCHES)
       setMatchSummary(SAMPLE_MATCH_SUMMARY)
+      setUserLocation(SAMPLE_LOCATION)
+      setLocalStores(MOCK_STORES)
       if (currentScreen === 'onboarding') {
         setQuizStarted(false)
         setSelectedStyles([])
@@ -1081,12 +888,17 @@ export default function Page() {
         setStyleProfile(null)
         setStoreMatches([])
         setMatchSummary('')
+        setUserLocation(null)
+        setLocalStores([])
         setCurrentScreen('onboarding')
         setQuizStarted(false)
         setSelectedStyles([])
+        locationRequested.current = false
       }
     }
   }, [sampleData])
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const toggleStyleSelection = useCallback((id: string) => {
     setSelectedStyles((prev) => {
@@ -1104,10 +916,8 @@ export default function Page() {
     setIsAnalyzing(true)
     setErrorMessage('')
     setActiveAgentId(STYLE_PROFILE_AGENT_ID)
-
     const selectedOptions = STYLE_OPTIONS.filter((opt) => selectedStyles.includes(opt.id))
     const message = `Analyze these style selections and generate a style profile. The user selected the following styles:\n\n${selectedOptions.map((opt) => `- ${opt.name} (${opt.category}): ${opt.description}. Tags: ${opt.tags.join(', ')}`).join('\n')}\n\nGenerate a JSON style profile with: vibe_name (catchy 2-3 word descriptor), style_tags (array of style keywords), color_preferences (array of color names), silhouette_preferences (array of silhouette types), vibe_description (2-3 sentence style personality description).`
-
     try {
       const result = await callAIAgent(message, STYLE_PROFILE_AGENT_ID)
       if (result.success) {
@@ -1128,7 +938,7 @@ export default function Page() {
       } else {
         setErrorMessage(result?.error ?? 'Failed to analyze style. Please try again.')
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('An error occurred while analyzing your style.')
     } finally {
       setIsAnalyzing(false)
@@ -1139,51 +949,109 @@ export default function Page() {
   const handleMatchStores = useCallback(async () => {
     if (!styleProfile) return
     setIsMatching(true)
+    setIsGeneratingStores(true)
     setErrorMessage('')
     setActiveAgentId(STORE_MATCH_AGENT_ID)
 
-    const storeData = MOCK_STORES.map((s) => ({
-      name: s.name,
-      brand_tags: s.brand_tags,
-      collection_descriptors: s.collection_descriptors,
-      aesthetic_category: s.aesthetic_category,
-    }))
+    const locationContext = userLocation
+      ? `The user is located in ${userLocation.displayName} (latitude: ${userLocation.latitude.toFixed(4)}, longitude: ${userLocation.longitude.toFixed(4)}).`
+      : 'The user location is unknown. Use a default major city area.'
 
-    const message = `Match this style profile against these stores and rank them by compatibility.\n\nStyle Profile:\n- Vibe: ${styleProfile.vibe_name}\n- Tags: ${Array.isArray(styleProfile.style_tags) ? styleProfile.style_tags.join(', ') : ''}\n- Colors: ${Array.isArray(styleProfile.color_preferences) ? styleProfile.color_preferences.join(', ') : ''}\n- Silhouettes: ${Array.isArray(styleProfile.silhouette_preferences) ? styleProfile.silhouette_preferences.join(', ') : ''}\n- Description: ${styleProfile.vibe_description}\n\nStores:\n${storeData.map((s) => `- ${s.name} (${s.aesthetic_category}): Tags: ${s.brand_tags.join(', ')}. Collections: ${s.collection_descriptors.join(', ')}`).join('\n')}\n\nReturn a JSON with: ranked_stores (array of {store_name, match_percentage (0-100), match_explanation, shared_tags}), match_summary (brief overall summary).`
+    const message = `You are a fashion retail matching AI. ${locationContext}
+
+First, generate 8 realistic clothing stores/boutiques that would plausibly exist near the user's location. Use real-sounding street names, neighborhoods, and local area references from that specific location. Each store should have a distinct aesthetic category from this list: Minimalist, Streetwear, Bohemian, Avant-Garde, Athleisure, Vintage, Professional, Casual.
+
+Then, match the user's style profile against each generated store and rank them by compatibility.
+
+User's Style Profile:
+- Vibe: ${styleProfile.vibe_name}
+- Tags: ${Array.isArray(styleProfile.style_tags) ? styleProfile.style_tags.join(', ') : ''}
+- Colors: ${Array.isArray(styleProfile.color_preferences) ? styleProfile.color_preferences.join(', ') : ''}
+- Silhouettes: ${Array.isArray(styleProfile.silhouette_preferences) ? styleProfile.silhouette_preferences.join(', ') : ''}
+- Description: ${styleProfile.vibe_description}
+
+Return a JSON object with:
+- "ranked_stores": array of objects sorted by match_percentage descending, each with:
+  - "store_name": string (realistic boutique name appropriate for the location)
+  - "match_percentage": number (0-100, be accurate, 95%+ should be rare)
+  - "match_explanation": string (1-2 sentence explanation of why they match or don't)
+  - "shared_tags": array of strings (matching style tags between user and store)
+  - "store_description": string (1-2 sentence store description)
+  - "store_address": string (realistic local street address for ${userLocation?.displayName || 'the area'})
+  - "store_distance": string (e.g., "0.3 mi", "1.2 mi" - vary realistically)
+  - "store_hours": string (e.g., "10AM - 8PM")
+  - "store_phone": string (realistic local phone number with area code)
+  - "aesthetic_category": string (one of: Minimalist, Streetwear, Bohemian, Avant-Garde, Athleisure, Vintage, Professional, Casual)
+  - "brand_tags": array of 5 strings (style descriptors for the store)
+  - "collection_names": array of 2-3 strings (current collection names)
+- "match_summary": string (brief overall summary mentioning the user's area/city by name)
+
+IMPORTANT: Generate stores with realistic addresses specifically for ${userLocation?.displayName || 'the user area'}. Use local street names, neighborhoods, and phone area codes. Sort by match_percentage descending.`
 
     try {
       const result = await callAIAgent(message, STORE_MATCH_AGENT_ID)
       if (result.success) {
         const parsed = parseAgentResult(result)
         if (parsed) {
-          const rankedStores = Array.isArray(parsed.ranked_stores) ? parsed.ranked_stores.map((s: any) => ({
+          const rankedStores: StoreMatch[] = Array.isArray(parsed.ranked_stores) ? parsed.ranked_stores.map((s: any) => ({
             store_name: s?.store_name ?? '',
             match_percentage: typeof s?.match_percentage === 'number' ? s.match_percentage : 0,
             match_explanation: s?.match_explanation ?? '',
             shared_tags: Array.isArray(s?.shared_tags) ? s.shared_tags : [],
           })) : []
+
+          const generatedStores: Store[] = Array.isArray(parsed.ranked_stores) ? parsed.ranked_stores.map((s: any, idx: number) => ({
+            id: `loc-s${idx + 1}`,
+            name: s?.store_name ?? `Store ${idx + 1}`,
+            description: s?.store_description ?? '',
+            brand_tags: Array.isArray(s?.brand_tags) ? s.brand_tags : [],
+            collection_descriptors: Array.isArray(s?.collection_names) ? s.collection_names : [],
+            aesthetic_category: s?.aesthetic_category ?? 'Casual',
+            address: s?.store_address ?? 'Address unavailable',
+            distance: s?.store_distance ?? `${(0.2 + idx * 0.3).toFixed(1)} mi`,
+            hours: s?.store_hours ?? '10AM - 7PM',
+            phone: s?.store_phone ?? '',
+            imageUrl: STORE_IMAGES[idx % STORE_IMAGES.length],
+            collections: Array.isArray(s?.collection_names) ? s.collection_names.map((name: string, ci: number) => ({
+              name,
+              imageUrl: COLLECTION_IMAGES[(idx + ci) % COLLECTION_IMAGES.length],
+              season: 'SS26',
+            })) : [],
+          })) : []
+
+          setLocalStores(generatedStores)
           setStoreMatches(rankedStores)
           setMatchSummary(parsed.match_summary ?? '')
         } else {
           setErrorMessage('Could not parse store matches. Please try again.')
         }
       } else {
-        setErrorMessage(result?.error ?? 'Failed to match stores. Please try again.')
+        setErrorMessage(result?.error ?? 'Failed to discover stores. Please try again.')
       }
-    } catch (err) {
-      setErrorMessage('An error occurred while matching stores.')
+    } catch {
+      setErrorMessage('An error occurred while discovering stores.')
     } finally {
       setIsMatching(false)
+      setIsGeneratingStores(false)
       setActiveAgentId(null)
     }
-  }, [styleProfile])
+  }, [styleProfile, userLocation])
+
+  // Auto-trigger store generation when location arrives and profile exists
+  useEffect(() => {
+    if (userLocation && styleProfile && localStores.length === 0 && !isMatching && !isGeneratingStores && currentScreen === 'discover' && !sampleData) {
+      handleMatchStores()
+    }
+  }, [userLocation, styleProfile, localStores.length, isMatching, isGeneratingStores, currentScreen, sampleData])
 
   const navigateToDiscover = useCallback(() => {
     setCurrentScreen('discover')
-    if (styleProfile && storeMatches.length === 0) {
-      handleMatchStores()
+    setActiveTab('discover')
+    if (!userLocation && !locationRequested.current) {
+      locationRequested.current = true
+      requestLocation()
     }
-  }, [styleProfile, storeMatches, handleMatchStores])
+  }, [userLocation, requestLocation])
 
   const handleSelectStore = useCallback((store: Store) => {
     setSelectedStore(store)
@@ -1192,13 +1060,9 @@ export default function Page() {
 
   const handleTabChange = useCallback((tab: 'discover' | 'favorites' | 'profile') => {
     setActiveTab(tab)
-    if (tab === 'discover') {
-      setCurrentScreen('discover')
-    } else if (tab === 'favorites') {
-      setCurrentScreen('discover')
-    } else {
-      setCurrentScreen('profile')
-    }
+    if (tab === 'discover') setCurrentScreen('discover')
+    else if (tab === 'favorites') setCurrentScreen('discover')
+    else setCurrentScreen('profile')
   }, [])
 
   const handleRetakeQuiz = useCallback(() => {
@@ -1208,6 +1072,9 @@ export default function Page() {
     setSelectedStyles([])
     setQuizStarted(true)
     setSampleData(false)
+    setLocalStores([])
+    setUserLocation(null)
+    locationRequested.current = false
     setCurrentScreen('onboarding')
   }, [])
 
@@ -1240,12 +1107,7 @@ export default function Page() {
           )}
 
           {currentScreen === 'onboarding' && quizStarted && (
-            <StyleQuiz
-              selectedStyles={selectedStyles}
-              onToggle={toggleStyleSelection}
-              onSubmit={handleAnalyzeStyle}
-              isAnalyzing={isAnalyzing}
-            />
+            <StyleQuiz selectedStyles={selectedStyles} onToggle={toggleStyleSelection} onSubmit={handleAnalyzeStyle} isAnalyzing={isAnalyzing} />
           )}
 
           {currentScreen === 'style-dna' && styleProfile && (
@@ -1254,16 +1116,12 @@ export default function Page() {
 
           {currentScreen === 'discover' && activeTab === 'discover' && (
             <DiscoverScreen
-              storeMatches={storeMatches}
-              matchSummary={matchSummary}
-              isMatching={isMatching}
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-              onRefresh={handleMatchStores}
-              onSelectStore={handleSelectStore}
-              favorites={favorites}
-              onToggleFavorite={toggleFavorite}
-              styleProfile={styleProfile}
+              storeMatches={storeMatches} matchSummary={matchSummary} isMatching={isMatching}
+              activeFilter={activeFilter} onFilterChange={setActiveFilter} onRefresh={handleMatchStores}
+              onSelectStore={handleSelectStore} favorites={favorites} onToggleFavorite={toggleFavorite}
+              styleProfile={styleProfile} localStores={localStores} userLocation={userLocation}
+              locationLoading={locationLoading} locationError={locationError}
+              onRequestLocation={requestLocation} isGeneratingStores={isGeneratingStores}
             />
           )}
 
@@ -1281,17 +1139,10 @@ export default function Page() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {MOCK_STORES.filter((s) => favorites.includes(s.id)).map((store) => {
+                  {localStores.filter((s) => favorites.includes(s.id)).map((store) => {
                     const match = storeMatches.find((m) => m.store_name === store.name)
                     return (
-                      <StoreCard
-                        key={store.id}
-                        store={store}
-                        match={match}
-                        onSelect={() => handleSelectStore(store)}
-                        isFavorite={true}
-                        onToggleFavorite={() => toggleFavorite(store.id)}
-                      />
+                      <StoreCard key={store.id} store={store} match={match} onSelect={() => handleSelectStore(store)} isFavorite={true} onToggleFavorite={() => toggleFavorite(store.id)} />
                     )
                   })}
                 </div>
@@ -1301,24 +1152,21 @@ export default function Page() {
 
           {currentScreen === 'store-detail' && selectedStore && (
             <StoreDetailScreen
-              store={selectedStore}
-              match={storeMatches.find((m) => m.store_name === selectedStore.name)}
-              onBack={() => setCurrentScreen('discover')}
-              isFavorite={favorites.includes(selectedStore.id)}
+              store={selectedStore} match={storeMatches.find((m) => m.store_name === selectedStore.name)}
+              onBack={() => setCurrentScreen('discover')} isFavorite={favorites.includes(selectedStore.id)}
               onToggleFavorite={() => toggleFavorite(selectedStore.id)}
             />
           )}
 
           {currentScreen === 'profile' && (
             <ProfileScreen
-              profile={styleProfile}
-              favorites={favorites}
-              onRetakeQuiz={handleRetakeQuiz}
-              onSelectStore={handleSelectStore}
+              profile={styleProfile} favorites={favorites} onRetakeQuiz={handleRetakeQuiz}
+              onSelectStore={handleSelectStore} localStores={localStores} userLocation={userLocation}
+              onRequestLocation={requestLocation}
             />
           )}
 
-          {/* Agent Status Panel - shown on discover/profile screens */}
+          {/* Agent Status Panel */}
           {(currentScreen === 'discover' || currentScreen === 'profile') && (
             <div className="px-4 pb-24">
               <AgentStatusPanel activeAgentId={activeAgentId} />
@@ -1326,9 +1174,7 @@ export default function Page() {
           )}
 
           {/* Bottom Navigation */}
-          {showBottomNav && (
-            <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-          )}
+          {showBottomNav && (<BottomNav activeTab={activeTab} onTabChange={handleTabChange} />)}
         </div>
       </div>
     </ErrorBoundary>
