@@ -1,0 +1,36 @@
+{
+  "agent_ids": {
+    "style_profile_agent": "69996315730bbd74d53e8ac3",
+    "store_match_agent": "69996316730bbd74d53e8ac5"
+  },
+  "agents": [
+    {
+      "node_id": "style_profile_agent",
+      "agent_id": "69996315730bbd74d53e8ac3",
+      "name": "Style Profile Agent",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "agent_type": "json",
+      "has_image_output": false,
+      "has_voice": false,
+      "has_file_output": false,
+      "has_knowledge_base": false
+    },
+    {
+      "node_id": "store_match_agent",
+      "agent_id": "69996316730bbd74d53e8ac5",
+      "name": "Store Match Agent",
+      "model": "gpt-4.1",
+      "provider": "openai",
+      "agent_type": "json",
+      "has_image_output": false,
+      "has_voice": false,
+      "has_file_output": false,
+      "has_knowledge_base": false
+    }
+  ],
+  "rag_ids": {},
+  "schedule_ids": {},
+  "workflow_created": true,
+  "all_agents_created": true
+}

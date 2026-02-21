@@ -1,0 +1,42 @@
+{
+  "agent_name": "Style Profile Agent",
+  "agent_id": "69996315730bbd74d53e8ac3",
+  "description": "Analyzes the user's selected outfit images from the style quiz, extracts style tags, vibe descriptors, color preferences, and silhouette preferences. Outputs a structured style profile JSON.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "vibe_name": "string",
+    "style_tags": [
+      "string"
+    ],
+    "color_preferences": [
+      "string"
+    ],
+    "silhouette_preferences": [
+      "string"
+    ],
+    "vibe_description": "string"
+  },
+  "example_response": {
+    "vibe_name": "A catchy 2-3 word style descriptor",
+    "style_tags": [
+      "sample string"
+    ],
+    "color_preferences": [
+      "sample string"
+    ],
+    "silhouette_preferences": [
+      "sample string"
+    ],
+    "vibe_description": "2-3 sentence description of overall style personality"
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/image.png"
+      }
+    ]
+  }
+}

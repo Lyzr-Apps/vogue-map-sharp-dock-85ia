@@ -1,0 +1,34 @@
+{
+  "agent_name": "Store Match Agent",
+  "agent_id": "69996316730bbd74d53e8ac5",
+  "description": "Receives the user's style profile and a list of nearby stores with their style metadata. Ranks stores by style compatibility, generates percentage match scores, and provides short explanations for matches.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "ranked_stores": [
+      {
+        "store_name": "string",
+        "match_percentage": "number",
+        "match_explanation": "string",
+        "shared_tags": [
+          "string"
+        ]
+      }
+    ],
+    "match_summary": "string"
+  },
+  "example_response": {
+    "ranked_stores": [
+      {
+        "store_name": "sample string",
+        "match_percentage": 0,
+        "match_explanation": "sample string",
+        "shared_tags": [
+          "sample string"
+        ]
+      }
+    ],
+    "match_summary": "Brief overall summary of the matching results"
+  }
+}
